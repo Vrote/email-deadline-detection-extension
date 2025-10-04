@@ -5,6 +5,10 @@ import joblib
 import base64
 import pickle
 from typing import List
+import json
+from datetime import datetime
+from dateutil import parser
+
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -101,10 +105,29 @@ def predict_single(payload: TextIn):
     }
 
 
+# ------------------ Cache ------------------
+CACHE_FILE = "emails_cache.json"
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, "r") as f:
+            return json.load(f)
+    return {"emails": [], "ids": [], "last_email_ts": None}
+
+def save_cache(cache):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache, f, indent=4)
+
+
 @app.get("/predict_from_gmail")
 def predict_from_gmail(max_results: int = 200):
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
     creds = None
+
+    # Load cache
+    cache = load_cache()
+    processed_ids = set(cache.get("ids", []))
+    last_email_ts = cache.get("last_email_ts", None)
 
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as f:
@@ -122,18 +145,31 @@ def predict_from_gmail(max_results: int = 200):
             pickle.dump(creds, f)
 
     service = build("gmail", "v1", credentials=creds)
-    results = service.users().messages().list(userId="me", maxResults=max_results).execute()
+
+    # Use Gmail search query to fetch only new emails
+    query = f"after:{last_email_ts}" if last_email_ts else ""
+    results = service.users().messages().list(
+        userId="me", maxResults=max_results, labelIds=["INBOX"], q=query
+    ).execute()
+
     messages = results.get("messages", [])
+    new_emails = []
 
-    emails = []
     for m in messages:
-        msg = service.users().messages().get(userId="me", id=m["id"]).execute()
+        if m["id"] in processed_ids:
+            continue  # Skip already processed emails
 
+        msg = service.users().messages().get(userId="me", id=m["id"]).execute()
         headers = msg.get("payload", {}).get("headers", [])
         subject = next((h["value"] for h in headers if h["name"] == "Subject"), "")
         sender = next((h["value"] for h in headers if h["name"] == "From"), "")
         date = next((h["value"] for h in headers if h["name"] == "Date"), "")
         snippet = msg.get("snippet", "")
+
+        # Skip spam/trash
+        labels = msg.get("labelIds", [])
+        if "SPAM" in labels or "TRASH" in labels:
+            continue
 
         body_text = ""
         parts = msg.get("payload", {}).get("parts", []) or []
@@ -144,24 +180,40 @@ def predict_from_gmail(max_results: int = 200):
 
         full_text = (snippet + "\n" + body_text).strip()
         cleaned = clean_text(full_text)
-
         X = vectorizer.transform([cleaned])
         prob = float(model.predict_proba(X).max()) if hasattr(model, "predict_proba") else 0.0
         dates_found = extract_dates(full_text)
-
-        # Only mark as deadline if probability > 0.8 AND dates are found
         pred = 1 if prob > 0.8 and len(dates_found) > 0 else 0
 
-        if pred == 1:  # ✅ Only append emails that are predicted as deadlines
-            emails.append({
+        if pred == 1:
+            email_data = {
                 "id": m["id"],
                 "subject": subject,
                 "from": sender,
                 "date": date,
                 "prediction": pred,
-                "probability": prob,
                 "dates_found": dates_found,
                 "snippet": snippet,
-            })
+            }
+            new_emails.append(email_data)
+            cache["emails"].append(email_data)
+            cache["ids"].append(m["id"])
 
-    return {"count": len(emails), "emails": emails}
+    # Update last_email_ts to latest email timestamp
+    timestamps = []
+    for e in new_emails:
+       try:
+         ts = int(parser.parse(e["date"]).timestamp())
+         timestamps.append(ts)
+       except:
+         continue
+    if timestamps:
+       cache["last_email_ts"] = max(timestamps)
+
+
+
+    # Save cache
+    save_cache(cache)
+
+    # Return cached emails (old + new)
+    return {"count": len(cache["emails"]), "emails": cache["emails"]}
