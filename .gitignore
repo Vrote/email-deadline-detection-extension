@@ -19,9 +19,7 @@ __pycache__/
 # ------------------------------------
 # Machine Learning Model Files
 # Adjust path if your models are stored differently (e.g., backend/models/*.pkl)
-*.pkl
-*.h5
-models/
+
 
 # ------------------------------------
 # Environment files & Configuration

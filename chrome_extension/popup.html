@@ -1,28 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deadline Detector</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>🔮 Deadline Detector</h1>
-      <p>AI that identifies important deadlines in your inbox</p>
+      <h1>🔮Gmail Deadline Detector</h1>
+      <p>Detect deadlines in your Gmail emails with AI</p>
     </header>
 
-    <button id="fetchBtn" class="btn-primary">⚡ Analyze Emails</button>
+    <button id="fetchBtn" class="btn-primary">Fetch Deadlines</button>
 
-    <div id="results" class="results">
-      <p class="placeholder">Click "Analyze Emails" to begin detection.</p>
+    <!-- Filters -->
+    <div style="margin-bottom: 10px;">
+      <label>
+        <input type="checkbox" id="filterToday"> Show only today's deadlines
+      </label>
+      <br>
+      <label>
+        <input type="checkbox" id="filterUpcoming"> Show only upcoming deadlines
+      </label>
     </div>
 
-    <footer>
-      <small>© 2025 Deadline AI • Smart Deadline Intelligence</small>
-    </footer>
+    <div id="results" class="results">
+      <p class="placeholder">🔍 Click "Fetch Deadlines" to analyze your emails.</p>
+    </div>
   </div>
 
   <script src="popup.js"></script>

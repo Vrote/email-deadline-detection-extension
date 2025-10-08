@@ -149,3 +149,33 @@ footer {
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+.preview-popup {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  width: 300px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+  line-height: 1.4;
+  top: 100%;
+  left: 10px;
+  transition: opacity 0.2s ease;
+}
+.deadline-item {
+  position: relative;
+  background: #f7f8fa;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+.deadline-item:hover {
+  background: #eef3ff;
+  cursor: pointer;
+}
