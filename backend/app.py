@@ -96,7 +96,7 @@ def predict_single(payload: TextIn):
     }
 
 @app.get("/predict_from_gmail")
-def predict_from_gmail(max_results: int = 50):
+def predict_from_gmail(max_results: int = 40):
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
     creds = None
 
