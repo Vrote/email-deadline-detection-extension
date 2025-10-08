@@ -13,15 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import nltk
 
-# Google API imports
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-# ------------------ Logging ------------------
+# ---------------- Logging ----------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# ------------------ NLTK Setup ------------------
+# ---------------- NLTK Setup ----------------
 try:
     from nltk.corpus import stopwords
     stop_words = set(stopwords.words("english"))
@@ -30,7 +29,7 @@ except Exception:
     from nltk.corpus import stopwords
     stop_words = set(stopwords.words("english"))
 
-# ------------------ Model Setup ------------------
+# ---------------- Model Setup ----------------
 MODEL_PATH = os.path.join("models", "deadline_classifier.pkl")
 VECT_PATH = os.path.join("models", "tfidf_vectorizer.pkl")
 
@@ -45,7 +44,7 @@ DATE_PATTERN = (
     r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\b"
 )
 
-# ------------------ Utility Functions ------------------
+# ---------------- Utility Functions ----------------
 def clean_text(text: str) -> str:
     text = str(text)
     text = re.sub(r"http\S+|www\.\S+", "", text)
@@ -54,36 +53,29 @@ def clean_text(text: str) -> str:
     tokens = [w for w in text.split() if w not in stop_words]
     return " ".join(tokens)
 
-
 def extract_dates(text: str) -> List[str]:
     return re.findall(DATE_PATTERN, text.lower())
 
-
-# ------------------ FastAPI Setup ------------------
+# ---------------- FastAPI Setup ----------------
 app = FastAPI(title="Deadline Detection API")
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with specific extension URL in production
+    allow_origins=["*"],  # Accept requests from Chrome extension
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------ Request Models ------------------
+# ---------------- Request Models ----------------
 class TextIn(BaseModel):
     email_text: str
 
-
-class BatchIn(BaseModel):
-    email_texts: List[str]
-
-
-# ------------------ Routes ------------------
+# ---------------- Routes ----------------
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Deadline Detection API running. Use POST /predict"}
-
+    return {"status": "ok", "message": "Deadline Detection API running."}
 
 @app.post("/predict")
 def predict_single(payload: TextIn):
@@ -103,13 +95,11 @@ def predict_single(payload: TextIn):
         "cleaned_text": cleaned,
     }
 
-
 @app.get("/predict_from_gmail")
-def predict_from_gmail(max_results: int = 40):
+def predict_from_gmail(max_results: int = 50):
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
     creds = None
 
-    # Load credentials from token
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as f:
             creds = pickle.load(f)
@@ -127,10 +117,10 @@ def predict_from_gmail(max_results: int = 40):
 
     service = build("gmail", "v1", credentials=creds)
 
-    # Fetch messages with pagination
     messages = []
     next_page_token = None
     fetched_count = 0
+
     while fetched_count < max_results:
         results = service.users().messages().list(
             userId="me",
@@ -146,7 +136,6 @@ def predict_from_gmail(max_results: int = 40):
             break
 
     logging.info(f"Fetched {len(messages)} emails from Gmail")
-
     deadline_emails = []
 
     for m in messages:
@@ -158,7 +147,6 @@ def predict_from_gmail(max_results: int = 40):
             date = next((h["value"] for h in headers if h["name"] == "Date"), "")
             snippet = msg.get("snippet", "")
 
-            # Skip spam/trash
             labels = msg.get("labelIds", [])
             if "SPAM" in labels or "TRASH" in labels:
                 continue
@@ -180,7 +168,7 @@ def predict_from_gmail(max_results: int = 40):
             dates_found = extract_dates(full_text)
             pred = 1 if prob > 0.8 and len(dates_found) > 0 else 0
 
-            if pred == 1:  # Only include emails predicted as deadlines
+            if pred == 1:
                 deadline_emails.append({
                     "id": m["id"],
                     "subject": subject,
@@ -196,5 +184,4 @@ def predict_from_gmail(max_results: int = 40):
             logging.error(f"Error processing email {m.get('id', 'Unknown')}: {e}")
             continue
 
-    logging.info(f"Total deadline emails: {len(deadline_emails)}")
     return {"count": len(deadline_emails), "emails": deadline_emails}
