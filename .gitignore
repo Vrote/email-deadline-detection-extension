@@ -1,22 +1,36 @@
-# Google API credentials
+# ------------------------------------
+# Google API credentials & Tokens (CRITICAL: DO NOT PUSH)
 credentials.json
 token.pickle
 
-# ML models (optional if large)
-backend/models/
-
-# Python cache
+# ------------------------------------
+# Python cache and Build Artifacts
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Database files
-*.db
+# ------------------------------------
+# Database files (local storage)
+*.db*
 *.sqlite
+# *.sqlite3 (If you use this specifically, you can add it)
 
-# Environment files
+# ------------------------------------
+# Machine Learning Model Files
+# Adjust path if your models are stored differently (e.g., backend/models/*.pkl)
+*.pkl
+*.h5
+models/
+
+# ------------------------------------
+# Environment files & Configuration
 .env
 
-# Virtual environment
+# ------------------------------------
+# Virtual environment directory
 venv/
+
+# ------------------------------------
+# IDE settings (Highly recommended if using VS Code)
+.vscode/

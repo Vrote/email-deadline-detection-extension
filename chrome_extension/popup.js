@@ -3,14 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultsDiv = document.getElementById("results");
 
   fetchBtn.addEventListener("click", async () => {
-    resultsDiv.innerHTML = "<p class='placeholder'>⏳ Fetching emails...</p>";
+    resultsDiv.innerHTML = "<p class='placeholder'>🔍 Analyzing your emails with AI...</p>";
 
     try {
       const res = await fetch("http://127.0.0.1:8000/predict_from_gmail");
       const data = await res.json();
 
       if (!data.emails || data.emails.length === 0) {
-        resultsDiv.innerHTML = "<p class='placeholder'>No deadlines found.</p>";
+        resultsDiv.innerHTML = "<p class='placeholder'>✨ No deadlines detected.</p>";
         return;
       }
 
@@ -23,16 +23,16 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><b>From:</b> ${email.from || "Unknown"}</p>
           <p><b>Date:</b> ${email.date || "Unknown"}</p>
           <p class="prediction ${email.prediction === 1 ? 'deadline' : 'nondeadline'}">
-            ${email.prediction === 1 ? "📌 Deadline" : "✔ No deadline"}
+            ${email.prediction === 1 ? "🚨 Deadline Detected" : "✅ No Deadline"}
           </p>
-          <p><b>Deadlines Found:</b> ${email.dates_found.length > 0 ? email.dates_found.join(", ") : "None"}</p>
+          <p><b>Detected Dates:</b> ${email.dates_found.length > 0 ? email.dates_found.join(", ") : "None"}</p>
         `;
         resultsDiv.appendChild(div);
       });
 
     } catch (err) {
       console.error(err);
-      resultsDiv.innerHTML = "<p class='placeholder'>⚠️ Failed to connect to backend.</p>";
+      resultsDiv.innerHTML = "<p class='placeholder'>⚠️ Backend connection failed.</p>";
     }
   });
 });
