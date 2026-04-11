@@ -41,10 +41,11 @@ vectorizer = joblib.load(VECT_PATH)
 
 DATE_PATTERN = (
     r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|"
-    r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\b"
+    r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?\b|"
+    r"\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"
 )
 
-# ---------------- Utility Functions ----------------
+
 def clean_text(text: str) -> str:
     text = str(text)
     text = re.sub(r"http\S+|www\.\S+", "", text)
@@ -54,7 +55,11 @@ def clean_text(text: str) -> str:
     return " ".join(tokens)
 
 def extract_dates(text: str) -> List[str]:
-    return re.findall(DATE_PATTERN, text.lower())
+    found = re.findall(DATE_PATTERN, text.lower())
+    # Strip non-alphanumeric at ends (like punctuation) and normalize whitespace
+    cleaned = [re.sub(r'^\W+|\W+$', '', " ".join(d.split())) for d in found]
+    # Filter out any empty strings and deduplicate
+    return list(dict.fromkeys(c for c in cleaned if c))
 
 # ---------------- FastAPI Setup ----------------
 app = FastAPI(title="Deadline Detection API")
@@ -89,14 +94,16 @@ def predict_single(payload: TextIn):
     dates_found = extract_dates(txt)
     pred = 1 if prob > 0.8 and len(dates_found) > 0 else 0
 
+    logging.info(f"Prediction probability: {prob}")
     return {
         "prediction": pred,
+        "probability": prob,
         "dates_found": dates_found,
         "cleaned_text": cleaned,
     }
 
 @app.get("/predict_from_gmail")
-def predict_from_gmail(max_results: int = 40):
+def predict_from_gmail(max_results: int = 50):
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
     creds = None
 

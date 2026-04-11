@@ -28,6 +28,13 @@ __pycache__/
 # ------------------------------------
 # Virtual environment directory
 venv/
+.venv/
+env/
+
+# ------------------------------------
+# Large Data Files
+DATASET/
+*.csv
 
 # ------------------------------------
 # IDE settings (Highly recommended if using VS Code)
